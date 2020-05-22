@@ -31,6 +31,7 @@ export class OpenApiValidator {
     if (options.fileUploader == null) options.fileUploader = {};
     if (options.$refParser == null) options.$refParser = { mode: 'bundle' };
     if (options.operationHandlers == null) options.operationHandlers = false;
+    if (options.operationHandlerDependencies == null) options.operationHandlerDependencies = {};
     if (options.validateFormats == null) options.validateFormats = 'fast';
 
     if (options.validateResponses === true) {
@@ -108,7 +109,7 @@ export class OpenApiValidator {
     }
 
     if (this.options.operationHandlers) {
-      this.installOperationHandlers(app, context);
+      this.installOperationHandlers(app, context, this.options.operationHandlerDependencies);
     }
   }
 
@@ -228,6 +229,7 @@ export class OpenApiValidator {
   private installOperationHandlers(
     app: Application | Router,
     context: OpenApiContext,
+    operationHandlerDependencies: object
   ): void {
     const tmpModules = {};
 
@@ -253,12 +255,17 @@ export class OpenApiValidator {
         const modulePath = path.join(this.options.operationHandlers, baseName);
         if (!tmpModules[modulePath]) {
           tmpModules[modulePath] = require(modulePath);
+          if(typeof tmpModules[modulePath] === 'function') {
+            tmpModules[modulePath] = tmpModules[modulePath](operationHandlerDependencies);
+          }
           if (!tmpModules[modulePath][oId]) {
             // if oId is not found only module, try the module's default export
             tmpModules[modulePath] = tmpModules[modulePath].default;
           }
         }
+
         const fn = tmpModules[modulePath][oId];
+
         if (!tmpModules[modulePath][oId]) {
           throw Error(
             `Could not find 'x-eov-operation-handler' with id ${oId} in module '${modulePath}'. Make sure operation '${oId}' defined in your API spec exists as a handler function in '${modulePath}'.`,

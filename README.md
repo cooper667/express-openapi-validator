@@ -169,14 +169,17 @@ Use express-openapi-validator's OpenAPI `x-eov-operation-*` vendor extensions. S
 
 **Here's the gist**
 
-- First, specifiy the `operationHandlers` option to set the base directory that contains your operation handler files.
+- First, specify the `operationHandlers` option to set the base directory that contains your operation handler files.
 
 ```javascript
 new OpenApiValidator({
   apiSpec,
   operationHandlers: path.join(__dirname),
+  operationHandlerDependencies: {logger}
 });
 ```
+
+`operationHandlerDependencies` is an optional object that will be passed to the handler module if it is a function.
 
 - Next, use the `x-eov-operation-id` OpenAPI vendor extension or `operationId` to specify the id of opeartion handler to invoke.
 
@@ -203,6 +206,19 @@ module.exports = {
   // the express handler implementaiton for ping
   ping: (req, res) => res.status(200).send('pong'),
 };
+```
+
+(Alternatively, using `operationHandlerDependencies`):
+
+```javascript
+module.exports = (dependencies) => ({
+  // the express handler implementaiton for ping
+  ping: (req, res) => {
+    const { logger } = dependencies;
+    logger.info("hello world"); 
+    return res.status(200).send('pong')
+  },
+});
 ```
 
 **Note:** A file may contain _one_ or _many_ handlers.
